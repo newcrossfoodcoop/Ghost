@@ -3,7 +3,8 @@ var Promise = require('bluebird'),
     semver = require('semver'),
     packageInfo = require('../../package.json'),
     errors = require('./errors'),
-    config = require('./config');
+    config = require('./config'),
+    api = require('./api');
 
 function GhostServer(rootApp) {
     this.rootApp = rootApp;
@@ -14,6 +15,9 @@ function GhostServer(rootApp) {
 
     // Expose config module for use externally.
     this.config = config;
+    
+    // Expose api to allow the parent application to make calls against it.
+    this.api = api;
 }
 
 GhostServer.prototype.connection = function (socket) {
