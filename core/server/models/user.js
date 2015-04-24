@@ -507,9 +507,9 @@ User = ghostBookshelf.Model.extend({
         roles = data.roles || getAuthorRole();
         delete data.roles;
 
-        return generatePasswordHash(userData.password).then(function (results) {
+        return generatePasswordHash(userData.password).then(function (hash) {
             // Assign the hashed password
-            userData.password = results[1];
+            userData.password = hash;
             // LookupGravatar
             return self.gravatarLookup(userData);
         }).then(function (userData) {
