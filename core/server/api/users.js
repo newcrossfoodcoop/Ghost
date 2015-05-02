@@ -154,10 +154,17 @@ users = {
                 if (!(data.users[0].roles && data.users[0].roles[0])) {
                     return editOperation();
                 }
-
+                
                 var role = data.users[0].roles[0],
                     roleId = parseInt(role.id || role, 10),
                     editedUserId = parseInt(options.id, 10);
+                
+                // if there's no context user (ie. internal) then allow role changes
+                if (!options.context.user) {
+                    return canThis(options.context).assign.role(role).then(function () {
+                        return editOperation();
+                    });
+                }
 
                 return dataProvider.User.findOne(
                     {id: options.context.user, status: 'all'}, {include: ['roles']}
