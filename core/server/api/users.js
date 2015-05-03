@@ -252,7 +252,7 @@ users = {
         }).catch(function (error) {
             return errors.handleAPIError(error, 'You do not have permission to add this user');
         });
-    }
+    },
 
     /**
      * ### Add user
