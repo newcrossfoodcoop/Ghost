@@ -198,6 +198,70 @@ users = {
     },
 
     /**
+     * ### Direct Add user
+     * A new user is silently added as an active user (no invitations or emails)
+     * @param {User} object the user to create
+     * @returns {Promise(User)} Newly created user
+     */
+    directAdd: function directAdd(object, options) {
+        var addOperation,
+            newUser,
+            user;
+            
+        if (options.include) {
+            options.include = prepareInclude(options.include);
+        }
+        
+        return utils.checkObject(object, docName).then(function (data) {
+            newUser = data.users[0];
+            
+            addOperation = function() {
+                if (newUser.email && newUser.password && newUser.name) {
+                    newUser.status = 'active';
+                } else {
+                    return Promise.reject(new errors.BadRequestError('Email, password and name required.'));
+                }
+                
+                return dataProvider.User.getByEmail(
+                    newUser.email
+                ).then(function (foundUser) {
+                    if (!foundUser) {
+                        return dataProvider.User.add(newUser, options);
+                    } else {
+                        return Promise.reject(new errors.BadRequestError('User is already registered.'));
+                    }
+                }).then(function (createdUser) {
+                    user = createdUser.toJSON(options);
+                }).then(function () {
+                    return Promise.resolve({users: [user]});
+                }).catch(Promise.reject); 
+            };
+            
+            // Check permissions
+            return canThis(options.context).add.user(object).then(function () {
+                if (newUser.roles && newUser.roles[0]) {
+                    var roleId = parseInt(newUser.roles[0].id || newUser.roles[0], 10);
+
+                    // Make sure user is allowed to add a user with this role
+                    return dataProvider.Role.findOne({id: roleId}).then(function (role) {
+                        if (role.get('name') === 'Owner') {
+                            return Promise.reject(new errors.NoPermissionError('Not allowed to create an owner user.'));
+                        }
+
+                        return canThis(options.context).assign.role(role);
+                    }).then(function () {
+                        return addOperation();
+                    });
+                }
+
+                return addOperation();
+            });
+        }).catch(function (error) {
+            return errors.handleAPIError(error, 'You do not have permission to add this user');
+        });
+    }
+
+    /**
      * ### Add user
      * The newly added user is invited to join the blog via email.
      * @param {User} object the user to create
