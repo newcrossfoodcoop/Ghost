@@ -187,11 +187,12 @@ authentication = {
         });
     },
 
-    setup: function (object) {
-        var setupUser,
+    setupSilent: function (object) {
+        var setupUser = {},
             internal = {context: {internal: true}};
 
-        return authentication.isSetup().then(function (result) {
+        // Allow access to setupUser in following setup function
+        return authentication.isSetup().bind(setupUser).then(function (result) {
             var setup = result.setup[0].status;
 
             if (setup) {
@@ -200,13 +201,13 @@ authentication = {
 
             return utils.checkObject(object, 'setup');
         }).then(function (checkedSetupData) {
-            setupUser = {
+            _.extend(setupUser, {
                 name: checkedSetupData.setup[0].name,
                 email: checkedSetupData.setup[0].email,
                 password: checkedSetupData.setup[0].password,
                 blogTitle: checkedSetupData.setup[0].blogTitle,
                 status: 'active'
-            };
+            });
 
             return dataProvider.User.findOne({role: 'Owner', status: 'all'});
         }).then(function (ownerUser) {
@@ -214,7 +215,7 @@ authentication = {
                 return dataProvider.User.setup(setupUser, _.extend(internal, {id: ownerUser.id}));
             } else {
                 return dataProvider.Role.findOne({name: 'Owner'}).then(function (ownerRole) {
-                    setupUser.roles = [ownerRole.id];
+                    this.roles = [ownerRole.id];
                     return dataProvider.User.add(setupUser, internal);
                 });
             }
@@ -230,7 +231,14 @@ authentication = {
             }
             setupUser = user.toJSON(internal);
             return settings.edit({settings: userSettings}, {context: {user: setupUser.id}});
-        }).then(function () {
+        });
+    },
+    
+    setup: function (object) {
+        var setupUser;
+        
+        return authentication.setupSilent(object).then(function () {
+            setupUser = this;
             var data = {
                 ownerEmail: setupUser.email
             };
